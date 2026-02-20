@@ -1,0 +1,300 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// 인증 & 유저
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?   // 소셜 로그인 유저는 null
+  nickname      String
+  avatar        String?
+  role          Role      @default(USER)
+  inviteCodeId  String?
+  inviteCode    InviteCode? @relation("UsedBy", fields: [inviteCodeId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  characters              Character[]
+  posts                   Post[]
+  comments                Comment[]
+  investigationParticipants InvestigationParticipant[]
+  investigationMessages   InvestigationMessage[]
+  createdInvestigations   Investigation[] @relation("CreatedBy")
+  createdInviteCodes      InviteCode[]    @relation("CreatedBy")
+
+  // NextAuth
+  accounts    Account[]
+  sessions    Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model InviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  createdBy String
+  creator   User      @relation("CreatedBy", fields: [createdBy], references: [id])
+  maxUses   Int       @default(1)
+  usedCount Int       @default(0)
+  expiresAt DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  usedByUsers User[] @relation("UsedBy")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ==========================================
+// 캐릭터 프로필
+// ==========================================
+
+model Character {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  age         Int?
+  affiliation String?  // 소속
+  personality String?  // 성격
+  appearance  String?  // 외모
+  background  String?  // 배경 스토리
+  stats       Json?    // 캐릭터 능력치 수치 (예: {"HP": 10, "MP": 5})
+  details     Json?    // 추가 세부 설정 (자유 형식)
+  profileImage String? // Cloudflare R2 URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계도
+  relationsFrom CharacterRelation[] @relation("FromCharacter")
+  relationsTo   CharacterRelation[] @relation("ToCharacter")
+}
+
+model CharacterRelation {
+  id              String    @id @default(cuid())
+  fromCharacterId String
+  fromCharacter   Character @relation("FromCharacter", fields: [fromCharacterId], references: [id], onDelete: Cascade)
+  toCharacterId   String
+  toCharacter     Character @relation("ToCharacter", fields: [toCharacterId], references: [id], onDelete: Cascade)
+  relationType    String    // 친구, 적대, 가족, 연인 등
+  description     String?   // 관계 설명
+  createdAt       DateTime  @default(now())
+
+  @@unique([fromCharacterId, toCharacterId])
+}
+
+// ==========================================
+// 조사용 게시판
+// ==========================================
+
+model Investigation {
+  id        String              @id @default(cuid())
+  title     String
+  type      InvestigationType
+  status    InvestigationStatus @default(WAITING)
+  script    Json?               // AI 생성 스크립트 (JSON)
+  adminId   String
+  admin     User                @relation("CreatedBy", fields: [adminId], references: [id])
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  points       InvestigationPoint[]
+  items        InvestigationItem[]
+  participants InvestigationParticipant[]
+  messages     InvestigationMessage[]
+  choices      InvestigationChoice[]
+}
+
+enum InvestigationType {
+  SOLO
+  MULTI
+}
+
+enum InvestigationStatus {
+  WAITING   // 대기 중
+  ACTIVE    // 진행 중
+  COMPLETE  // 완료
+}
+
+model InvestigationPoint {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  name            String        // 장소/포인트 이름
+  description     String        // 설명
+  difficulty      Int           @default(1) // 난이도 (1~5)
+  order           Int           @default(0) // 순서
+  createdAt       DateTime      @default(now())
+}
+
+model InvestigationItem {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  name            String        // 물품 이름
+  description     String        // 물품 설명
+  condition       String?       // 획득 조건
+  createdAt       DateTime      @default(now())
+}
+
+model InvestigationParticipant {
+  id              String            @id @default(cuid())
+  investigationId String
+  investigation   Investigation     @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            ParticipantRole
+  status          String            @default("ACTIVE") // ACTIVE, KICKED
+  stats           Json?             // 조사 내부에서의 현재 능력치 (변동될 수 있음)
+  joinedAt        DateTime          @default(now())
+
+  @@unique([investigationId, userId])
+}
+
+enum ParticipantRole {
+  INVESTIGATOR  // 조사자 (채팅 가능)
+  SPECTATOR     // 관전자 (흐릿한 채팅, 조사자에게 비노출)
+}
+
+model InvestigationMessage {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  userId          String?       // null = 시스템/AI 메시지
+  user            User?         @relation(fields: [userId], references: [id])
+  content         String
+  messageType     MessageType
+  createdAt       DateTime      @default(now())
+}
+
+enum MessageType {
+  SCRIPT      // AI 스크립트 출력
+  USER_CHAT   // 조사자 채팅
+  SPECTATOR   // 관전자 채팅 (조사자에게 비노출)
+  CHOICE      // 선택지 결과
+  SYSTEM      // 시스템 안내
+}
+
+model InvestigationChoice {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  stepIndex       Int           // 스크립트 내 위치
+  options         Json          // 선택지 옵션들
+  selectedOption  Int?          // 선택된 옵션 인덱스
+  selectedAt      DateTime?
+  createdAt       DateTime      @default(now())
+}
+
+// ==========================================
+// 일반 게시판
+// ==========================================
+
+model Post {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  category  String      @default("일반") // 유저 설정 카테고리
+  likes     Int         @default(0)
+  views     Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  media     PostMedia[]
+  comments  Comment[]
+}
+
+model PostMedia {
+  id        String    @id @default(cuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String    // Cloudflare R2 URL
+  type      MediaType
+  fileName  String
+  fileSize  Int       // bytes
+  createdAt DateTime  @default(now())
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 사이트 관리 설정
+// ==========================================
+
+model SiteSetting {
+  id              String   @id @default("default")
+  appName         String   @default("Character Commu")
+  themeMode       String   @default("dark") // "dark" or "light"
+  themeColor      String   @default("#7c5cff") // 메인 테마 색상
+  fontFamily      String   @default("Inter") // 기본 폰트
+  bgmUrl          String?  // 유튜브 URL
+  bgmVolume       Float    @default(0.5)
+  customStats     Json?    // 관리자가 정의한 능력치 이름 목록 (예: ["HP", "MP", "Luck"])
+  updatedAt       DateTime @updatedAt
+}

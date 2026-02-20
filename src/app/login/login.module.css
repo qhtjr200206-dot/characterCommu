@@ -1,0 +1,117 @@
+.container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    padding: var(--spacing-lg);
+}
+
+.card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-xl);
+    backdrop-filter: var(--glass-backdrop);
+    padding: var(--spacing-2xl);
+    max-width: 420px;
+    width: 100%;
+    animation: slideUp 600ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gradient-accent);
+}
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.subtitle {
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: var(--spacing-xl);
+}
+
+.message {
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.error {
+    color: var(--color-danger);
+    font-size: 0.85rem;
+    text-align: center;
+    animation: slideUp 200ms ease;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-xl) 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+.socialButtons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.socialBtn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.95rem;
+    padding: 12px;
+}
+
+.registerHint {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin-top: var(--spacing-xl);
+}
+
+.registerHint a {
+    color: var(--color-accent-light);
+    font-weight: 500;
+}
+
+@media (max-width: 480px) {
+    .card {
+        padding: var(--spacing-xl);
+    }
+}

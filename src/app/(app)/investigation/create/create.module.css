@@ -1,0 +1,54 @@
+.stepper {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.step {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    transition: all var(--transition-normal);
+}
+
+.step.active {
+    background: rgba(124, 92, 255, 0.15);
+    border-color: var(--color-accent);
+    color: var(--color-accent-light);
+    font-weight: 600;
+}
+
+.itemRow {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.scriptEditor {
+    max-height: 500px;
+    overflow-y: auto;
+    background: var(--color-bg-primary);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.sceneEditBox {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    transition: all var(--transition-fast);
+}
+
+.sceneEditBox:hover {
+    border-color: rgba(124, 92, 255, 0.3);
+}
